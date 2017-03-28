@@ -23,7 +23,7 @@
   <body>
     <div id="nickWrap">
         <p>Enter a username</p>
-        <form id="setNick">
+        <form id="setNick" action="">
             <input size="35" id="nickname"></input>
             <input type="submit"></input>
         </form>
@@ -31,7 +31,7 @@
     <div id="contentWrapper">
         <div id="chatWrap">
             <ul id="messages"></ul>
-            <form action="">
+            <form id="chatting" action="">
             <input id="m" autocomplete="off" /><button>Send</button>
             </form>
         </div>
@@ -47,16 +47,17 @@
         var $users = $(users);
 
         $nickForm.submit(function() {
-            socket.emit('newUser', $nickname.val(), function(data){
+            socket.emit('newUser', { _id: $nickname.val()}, function(data){
                 if (data) {
                     $('#nickWrap').hide();
                     $('#contentWrapper').show();
                 }
             });
             $nickname.val('');
+            return false;
         })
 
-        socket.on('username', function(data) {
+        socket.on('userID', function(data) {
             var html = '';
             for (var i = 0; i < data.length; i++){
                 html += data[i] + '</br>';
@@ -64,18 +65,21 @@
             $users.html(html);
         });
 
-        $('form').submit(function(){
-            socket.emit('chat message', $('#m').val(), function(data) {
-                $('#messages').append($('<li>').text(data));
+        $('#chatting').submit(function(){
+            var msg = $('#m').val().trim();
+            var ind = msg.indexOf(' ');
+            socket.emit('chat', {
+                    receiver: msg.substr(0, ind),
+                    msg: msg.substr(ind+1)
             });
             $('#m').val('');
             return false;
         });
-        socket.on('chat message', function(data){
-            $('#messages').append($('<li>').text(data.nickname+': '+data.msg));
+        socket.on('chat', function(data) {
+            $('#messages').append($('<li>').text(data.sender+': '+data.msg));
         });
-        socket.on('whisper', function(data){
-            $('#messages').append($('<li>').text('!'+data.nickname+': '+data.msg));
+        socket.on('err', function(data) {
+            $('#messages').append($('<li>').text('Error: '+data.err));
         });
     });
     </script>
