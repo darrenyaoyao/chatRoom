@@ -47,7 +47,7 @@
         var $users = $(users);
 
         $nickForm.submit(function() {
-            socket.emit('new user', $nickname.val(), function(data){
+            socket.emit('newUser', $nickname.val(), function(data){
                 if (data) {
                     $('#nickWrap').hide();
                     $('#contentWrapper').show();
