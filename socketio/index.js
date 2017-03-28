@@ -1,4 +1,5 @@
 var socketio = require('socket.io');
+var User = require('../models/user');
 
 module.exports = class SocketServer {
     constructor(app) {
@@ -14,6 +15,15 @@ module.exports = class SocketServer {
 
     updateNickname () {
         this.io.sockets.emit('userID', Object.keys(this.users));
+        User.find()
+            .then(users => {
+                this.io.sockets.emit('online', users);
+            })
+            .catch(err => {
+                this.io.sockets.emit('err', {
+                    err: 'Database error'
+                });
+            });
     }
 
     disconnect (socket) {
@@ -21,22 +31,42 @@ module.exports = class SocketServer {
         if ( !socket._id ) {
             return false;
         }
-        delete this.users[socket.id];
-        this.updateNickname();
+        User.findById(socket._id)
+            .then(user => {
+                user.online = false;
+                user.save()
+                    .then(() => {
+                        delete this.users[socket._id];
+                        this.updateNickname();
+                    });
+            });
     }
 
     newUser (data, callback, socket) {
-        if (data._id in this.users) {
-            callback(false);
-        } else {
-            callback(true);
-            socket._id = data._id;
-            this.users[socket._id] = socket;
-            this.updateNickname();
-        }
+        User.findById(data._id)
+            .then(user => {
+                if (data._id in this.users) {
+                    socket.emit('err', {
+                        err: 'Wrong user ID (Duplicate)'
+                    });
+                } else {
+                    user.online = true;
+                    user.save()
+                        .then(() => {
+                            socket._id = data._id;
+                            this.users[socket._id] = socket;
+                            this.updateNickname();
+                        });
+                }
+            })
+            .catch(err => {
+                socket.emit('err', {
+                    err: 'Wrong user ID'
+                });
+            });
     }
 
-    chat (data, callback, socket) {
+    chat (data, socket) {
         if (data.receiver in this.users) {
             this.users[data.receiver].emit('chat', {
                 msg: data.msg,
@@ -44,7 +74,7 @@ module.exports = class SocketServer {
             });
         } else {
             this.users[socket._id].emit('err', {
-                err: 'There is no this user'
+                err: 'There is no this receiver ID'
             });
         }
     }
@@ -52,9 +82,9 @@ module.exports = class SocketServer {
     listen () {
         this.io.on('connection', (socket) => {
             console.log('a user connected');
-            socket.on('disconnect', (socket) => this.disconnect(socket));
+            socket.on('disconnect', () => this.disconnect(socket));
             socket.on('newUser', (data, callback) => this.newUser(data, callback, socket));
-            socket.on('chat', (data, callback) => this.chat(data, callback, socket));
+            socket.on('chat', (data) => this.chat(data, socket));
         });
     }
 

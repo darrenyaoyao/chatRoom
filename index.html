@@ -47,12 +47,9 @@
         var $users = $(users);
 
         $nickForm.submit(function() {
-            socket.emit('newUser', { _id: $nickname.val()}, function(data){
-                if (data) {
-                    $('#nickWrap').hide();
-                    $('#contentWrapper').show();
-                }
-            });
+            socket.emit('newUser', { _id: $nickname.val()});
+            $('#nickWrap').hide();
+            $('#contentWrapper').show();
             $nickname.val('');
             return false;
         })
@@ -80,6 +77,9 @@
         });
         socket.on('err', function(data) {
             $('#messages').append($('<li>').text('Error: '+data.err));
+        });
+        socket.on('online', function(data){
+            console.log(data);
         });
     });
     </script>

@@ -4,7 +4,11 @@ mongoose.Promise = global.Promise;
 
 var UserSchema = new Schema({
     username: String,
-    password: String
+    password: String,
+    online: {
+        type: Boolean,
+        default: false
+    }
 });
 
 module.exports = mongoose.model('User', UserSchema);
