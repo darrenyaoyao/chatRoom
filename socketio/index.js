@@ -1,5 +1,7 @@
 var socketio = require('socket.io');
 var User = require('../models/user');
+var Conversation = require('../models/conversation');
+var Message = require('../models/message');
 
 module.exports = class SocketServer {
     constructor(app) {
@@ -68,6 +70,35 @@ module.exports = class SocketServer {
 
     chat (data, socket) {
         if (data.receiver in this.users) {
+            var p1 = Conversation.findOne({
+                userOne: data.receiver,
+                userTwo: socket._id
+            });
+            var p2 = Conversation.findOne({
+                userOne: socket._id,
+                userTwo: data.receiver
+            });
+            Promise.all([p1, p2]).then(values => {
+                if ( !values[0] && !values[1]) {
+                    var newConversation = new Conversation();
+                    newConversation.userOne = socket._id;
+                    newConversation.userTwo = data.receiver;
+                    newConversation.save(() => {
+                        var newMessage = new Message();
+                        newMessage.message = data.msg;
+                        newMessage.user = socket._id;
+                        newMessage.conversation = newConversation._id;
+                        newMessage.save();
+                    });
+                } else {
+                    var exitConversation = values[0] || values[1];
+                    var newMessage = new Message();
+                    newMessage.message = data.msg;
+                    newMessage.user = socket._id;
+                    newMessage.conversation = exitConversation._id;
+                    newMessage.save();
+                }
+            });
             this.users[data.receiver].emit('chat', {
                 msg: data.msg,
                 sender: socket._id
