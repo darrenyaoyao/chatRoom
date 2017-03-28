@@ -34,42 +34,33 @@ router.get('/', function(req, res) {
 });
 
 router.get('/:user_id', function(req, res) {
-    User.findById(req.params.bear_id, function(err, user) {
-        if (err) {
-            res.send(err);
-        }
-        res.json(user);
-    });
+    User.findById(req.params.user_id)
+        .then(user => res.json(user))
+        .catch(err => res.status(400).send(err));
 });
 
 router.put('/:user_id', function(req, res) {
-    User.findById(req.params.user_id, function(err, user) {
-        if (err) {
-            res.send(err);
-        }
-        user.username = req.body.username;
-        user.save(function(err) {
-            if (err) {
-                res.send(err);
-            }
-            res.json({
-                message: 'User updated!'
+    User.findById(req.params.user_id)
+        .then(user => {
+            user.username = req.body.username;
+            user.save(function(err) {
+                if (err) {
+                    res.send(err);
+                }
+                res.json({
+                    message: 'User updated!'
+                });
             });
-        });
-    });
+        })
+        .catch(err => res.status(400).send(err));
 });
 
 router.delete('/:user_id', function(req, res) {
     User.remove({
         _id: req.params.user_id
-    }, function(err, user) {
-        if (err) {
-            res.send(err);
-        }
-        res.json({
-            message: 'Successfully deleted'
-        });
-    });
+    }).then(user => res.json({
+        message: 'Successfully deleted'
+    })).catch(err => res.status(400).send(err));
 });
 
 module.exports = router;
